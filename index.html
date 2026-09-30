@@ -11,14 +11,23 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="hacker.css">
 </head>
-<body>
+<body class="booting">
+  <div class="boot" id="boot-screen" aria-hidden="true">
+    <div id="boot-log"></div>
+    <div class="boot-bar"><i id="boot-bar-fill"></i></div>
+    <div class="boot-hint">НАЖМИ ПЫЩ ДЛЯ ДЫМА</div>
+  </div>
+  <canvas id="matrix-canvas" aria-hidden="true"></canvas>
   <canvas id="smoke-canvas" aria-hidden="true"></canvas>
   <div class="scanlines" aria-hidden="true"></div>
+  <div class="scanwave" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
   <header class="topbar">
     <button class="menu-toggle" id="menu-toggle" aria-label="Открыть меню">☰</button>
     <a class="brand" href="#top" aria-label="Архив 3115">
-      <span class="brand-mark">3115</span><span class="brand-text">ПЫЩ-ПАРАД<br><small>ЦИФРОВОЙ АРХИВ</small></span>
+      <span class="brand-mark glitch">3115</span><span class="brand-text">ПЫЩ-ПАРАД<br><small>ЦИФРОВОЙ АРХИВ</small></span>
     </a>
     <div class="top-status"><i></i> СИСТЕМА АКТИВНА</div>
     <button class="pysh-button" id="pysh-button"><span>☄</span> ПЫЩ</button>
@@ -52,5 +61,6 @@
   <div class="smoke-hud" id="smoke-hud"><span class="hud-dot"></span><span id="smoke-status-text">АТМОСФЕРА СТАБИЛИЗИРОВАНА</span><b id="smoke-density-val">0%</b></div>
   <script src="lore.js"></script>
   <script src="app.js"></script>
+  <script src="hacker.js"></script>
 </body>
 </html>
