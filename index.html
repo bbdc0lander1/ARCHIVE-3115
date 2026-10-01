@@ -12,6 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="hacker.css">
+  <link rel="stylesheet" href="enhance.css">
 </head>
 <body class="booting">
   <div class="boot" id="boot-screen" aria-hidden="true">
@@ -24,12 +25,21 @@
   <div class="scanlines" aria-hidden="true"></div>
   <div class="scanwave" aria-hidden="true"></div>
   <div class="vignette" aria-hidden="true"></div>
+  <div class="lore-ticker" aria-hidden="true"><span class="tick-track" id="tick-track"></span></div>
   <header class="topbar">
     <button class="menu-toggle" id="menu-toggle" aria-label="Открыть меню">☰</button>
     <a class="brand" href="#top" aria-label="Архив 3115">
       <span class="brand-mark glitch">3115</span><span class="brand-text">ПЫЩ-ПАРАД<br><small>ЦИФРОВОЙ АРХИВ</small></span>
     </a>
     <div class="top-status"><i></i> СИСТЕМА АКТИВНА</div>
+    <div class="top-actions">
+      <button class="icon-btn primary" id="ctl-btn" title="Пульт управления (Ctrl+У)" aria-label="Пульт управления">☰<b class="btn-label">МЕНЮ</b></button>
+      <span class="top-sep" aria-hidden="true"></span>
+      <button class="icon-btn" id="cmd-btn" title="Палитра команд (Ctrl+K)" aria-label="Палитра команд">⌘</button>
+      <button class="icon-btn" id="fav-btn" title="Избранное (F)" aria-label="Избранное">★<span class="fav-count" id="fav-count" hidden>0</span></button>
+      <button class="icon-btn" id="theme-btn" title="Тема (T)" aria-label="Сменить тему">◐</button>
+      <button class="icon-btn" id="sound-btn" title="Звук (M)" aria-label="Звук">♪</button>
+    </div>
     <button class="pysh-button" id="pysh-button"><span>☄</span> ПЫЩ</button>
   </header>
   <div class="layout" id="top">
@@ -59,8 +69,114 @@
     </main>
   </div>
   <div class="smoke-hud" id="smoke-hud"><span class="hud-dot"></span><span id="smoke-status-text">АТМОСФЕРА СТАБИЛИЗИРОВАНА</span><b id="smoke-density-val">0%</b></div>
+  <div class="statusbar" id="statusbar" aria-hidden="true">
+    <span class="sb-item"><span class="pulse"></span><b>СИСТЕМА</b> АКТИВНА</span>
+    <span class="sb-sep sb-hide">│</span>
+    <span class="sb-item sb-hide">РАЗДЕЛ: <b id="sb-section">—</b></span>
+    <span class="sb-sep sb-hide">│</span>
+    <span class="sb-item">ЗАПИСЕЙ: <b id="sb-count">0</b></span>
+    <span class="sb-sep">│</span>
+    <span class="sb-item">ДЫМ: <span class="sb-bar"><i id="sb-smoke" style="width:0%"></i></span></span>
+    <span class="sb-right">
+      <span class="sb-item sb-hide">FPS: <b id="sb-fps">60</b></span>
+      <span class="sb-item sb-hide">ОБРАЩЕНО: <b id="sb-visited">0</b></span>
+      <span class="sb-item sb-clock" id="sb-clock">--:--:--</span>
+    </span>
+  </div>
+  <div class="cmdk" id="cmdk" role="dialog" aria-modal="true" aria-label="Палитра команд">
+    <div class="cmdk-box">
+      <input class="cmdk-input" id="cmdk-input" type="text" placeholder="Куда идём, оператор? (команда, запись, раздел…)" autocomplete="off">
+      <div class="cmdk-list" id="cmdk-list"></div>
+      <div class="cmdk-foot"><span><kbd>↑</kbd><kbd>↓</kbd> выбор</span><span><kbd>Enter</kbd> открыть</span><span><kbd>Esc</kbd> закрыть</span></div>
+    </div>
+  </div>
+  <div class="dossier" id="dossier" role="dialog" aria-modal="true" aria-label="Досье">
+    <div class="dossier-panel" id="dossier-panel"></div>
+  </div>
+  <div class="web-control" id="web-control" role="dialog" aria-modal="true" aria-label="Пульт управления">
+    <div class="wc-panel">
+      <button class="dossier-close wc-close" id="wc-close" aria-label="Закрыть">✕</button>
+      <div class="wc-head"><div class="eyebrow">// ПУЛЬТ ОПЕРАТОРА 3115</div><h2>УПРАВЛЕНИЕ</h2></div>
+
+      <div class="wc-grid">
+        <section class="wc-card wc-wide">
+          <div class="wc-title">⌕ ПОИСК ПО ВСЕМУ ЛОРУ</div>
+          <div class="wc-row wc-wrap">
+            <input class="wc-input wc-grow" id="wc-find" type="text" placeholder="слово, имя, артефакт, место…">
+            <button class="wc-btn" data-cmd="find" data-arg="find">НАЙТИ</button>
+            <button class="wc-btn primary" data-cmd="about">◉ О СИСТЕМЕ + ПОИСК</button>
+          </div>
+        </section>
+
+        <section class="wc-card">
+          <div class="wc-title">⌂ НАВИГАЦИЯ</div>
+          <select class="wc-select" id="wc-cat"></select>
+          <div class="wc-row wc-wrap">
+            <button class="wc-btn" data-cmd="go" data-arg="go">ПЕРЕЙТИ</button>
+            <button class="wc-btn" data-cmd="ls">СПИСОК ЗАПИСЕЙ</button>
+            <button class="wc-btn" data-cmd="timeline">◷ ХРОНОЛОГИЯ</button>
+          </div>
+        </section>
+
+        <section class="wc-card">
+          <div class="wc-title">◈ ЗАПИСИ</div>
+          <select class="wc-select" id="wc-item"></select>
+          <div class="wc-row wc-wrap">
+            <button class="wc-btn" data-cmd="cat" data-arg="cat">ОТКРЫТЬ ДОСЬЕ</button>
+            <button class="wc-btn" data-cmd="fav" data-arg="fav">★ В ИЗБРАННОЕ</button>
+          </div>
+        </section>
+
+        <section class="wc-card">
+          <div class="wc-title">◐ ТЕМА</div>
+          <div class="wc-themes" id="wc-themes"></div>
+        </section>
+
+        <section class="wc-card">
+          <div class="wc-title">⚙ СИСТЕМА</div>
+          <div class="wc-row wc-wrap">
+            <button class="wc-btn primary" data-cmd="pysh">☄ ПЫЩ</button>
+            <button class="wc-btn" data-cmd="sound">♪ ЗВУК</button>
+            <button class="wc-btn" data-cmd="stats">▦ СТАТИСТИКА</button>
+            <button class="wc-btn" data-cmd="help">? ПОМОЩЬ</button>
+            <button class="wc-btn" data-cmd="lore">✦ МАНТРА</button>
+            <button class="wc-btn" data-cmd="whoami">☺ КТО Я</button>
+            <button class="wc-btn" data-cmd="date">⏱ ВРЕМЯ</button>
+            <button class="wc-btn" data-cmd="clear">⌫ ОЧИСТИТЬ</button>
+            <button class="wc-btn" data-cmd="exit">✕ ЗАКРЫТЬ</button>
+          </div>
+        </section>
+
+        <section class="wc-card">
+          <div class="wc-title">▚ ИНСТРУМЕНТЫ</div>
+          <div class="wc-row wc-wrap">
+            <button class="wc-btn" id="wc-open-term">▚ ТЕРМИНАЛ</button>
+            <button class="wc-btn" id="wc-open-cmdk">⌘ ПАЛИТРА</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="wc-console">
+        <div class="wc-console-bar">ВЫВОД КОМАНД</div>
+        <div class="wc-out" id="web-out"></div>
+      </div>
+    </div>
+  </div>
+  <div class="terminal" id="terminal" role="dialog" aria-modal="true" aria-label="Терминал">
+    <div class="terminal-box">
+      <div class="terminal-bar"><span class="dot g"></span><span class="dot"></span><span class="dot"></span> ROOT@PODVAL-59:~/3115</div>
+      <div class="terminal-out" id="terminal-out"></div>
+      <form class="terminal-form" id="terminal-form"><span class="ps1">root@3115:~#</span><input id="terminal-input" type="text" autocomplete="off" spellcheck="false" autofocus></form>
+    </div>
+  </div>
+  <div class="timeline" id="timeline" role="dialog" aria-modal="true" aria-label="Хронология">
+    <div class="timeline-panel" id="timeline-panel"></div>
+  </div>
+  <div class="toast-wrap" id="toast-wrap" aria-live="polite"></div>
+  <canvas id="confetti-canvas" aria-hidden="true"></canvas>
   <script src="lore.js"></script>
   <script src="app.js"></script>
   <script src="hacker.js"></script>
+  <script src="enhance.js"></script>
 </body>
 </html>
