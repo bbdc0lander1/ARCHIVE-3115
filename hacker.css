@@ -1,177 +1,198 @@
 /* ==========================================================================
-   ARCHIVE-3115 // HACKER TERMINAL LAYER
-   Добавочный слой поверх style.css: скан-волна, CRT, матричный дождь,
-   глитч, терминальный курсор и boot-последовательность.
+   ARCHIVE-3115 // HACKER TERMINAL LAYER (JS)
+   Матричный дождь, boot-последовательность, печатающийся текст,
+   терминальные щелчки и глитч-эффекты.
    ========================================================================== */
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-:root{
-  --scan:#39ff78;
-}
+  /* ---------- Терминальный щелчок (общий движок enhance.js) -------- */
+  function click() {
+    try {
+      if (window.soundEngine && window.soundEngine.playClick) window.soundEngine.playClick();
+    } catch (_) {}
+  }
 
-/* --- Сетка на фоне ------------------------------------------------ */
-body::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  z-index:-1;
-  pointer-events:none;
-  background-image:
-    linear-gradient(rgba(57,255,120,.045) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(57,255,120,.045) 1px,transparent 1px);
-  background-size:42px 42px;
-  -webkit-mask-image:radial-gradient(ellipse at 50% 0,transparent 38%,#000 92%);
-  mask-image:radial-gradient(ellipse at 50% 0,transparent 38%,#000 92%);
-}
+  /* ---------- Матричный дождь из слов ПЫЩ-ПАРАДА ------------------ */
+  function initMatrix() {
+    if (reduce) return;
+    const canvas = document.getElementById('matrix-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const words = [
+      '3115', 'ПЫЩ', 'ЫВЫВ', 'ГУРЫЧ', 'РАММ', 'ЗАВУЧ', 'ДЫМ', 'ПОДВАЛ',
+      'ГУРИН ДЖИХАД', 'ГУРИНТАЙМ', 'ОЛЕНЕ', 'ГУРИНКОИН', 'СНИКЕРС',
+      'ТУРБИНА', 'БАЛАКЛАВА', 'ВАЛЕНОК', 'ГУРИНГОЛУБЬ', 'ДЫМОХЛЮП',
+      'БРИТВЕНЬ', 'СИДОРОВ', 'БИГМУК', 'ЕПЫП', 'ХМУРЫЧ', 'ПЫХТЫЧ',
+      'ИЗОЛЕНТА', 'КОСЯК ЗНАНИЙ', 'ВЕНТИЛЯЦИЯ', 'АТЛАНТИДА', 'GUR',
+      'ЗАВУЧ В ДЫМУ НЕ ВИДИТ', 'ШКОЛА №59', 'КРЫША', 'ПЫЩ-ПАРАД'
+    ];
+    const fontSize = 14;
+    let cols = 0, streams = [], w = 0, h = 0;
 
-/* --- Матричный дождь (позади контента) ---------------------------- */
-#matrix-canvas{
-  position:fixed;
-  inset:0;
-  width:100%;
-  height:100%;
-  z-index:-1;
-  opacity:.12;
-  pointer-events:none;
-}
+    function resize() {
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      w = innerWidth;
+      h = innerHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cols = Math.max(6, Math.floor(w / 150));
+      streams = new Array(cols).fill(0).map(() => ({
+        y: Math.random() * -h,
+        word: words[(Math.random() * words.length) | 0],
+        speed: fontSize * (0.5 + Math.random() * 0.6)
+      }));
+    }
+    resize();
+    addEventListener('resize', resize);
 
-/* --- Усиленные scanlines + мерцание люминофора -------------------- */
-.scanlines{opacity:.08;animation:scanDrift 12s linear infinite}
-@keyframes scanDrift{from{background-position-y:0}to{background-position-y:5px}}
+    let last = 0;
+    function draw(t) {
+      requestAnimationFrame(draw);
+      if (t - last < 90) return;
+      last = t;
+      ctx.fillStyle = 'rgba(2,6,3,.14)';
+      ctx.fillRect(0, 0, w, h);
+      ctx.font = fontSize + 'px monospace';
+      for (let i = 0; i < cols; i++) {
+        const s = streams[i];
+        const x = (i + 0.5) * (w / cols);
+        const chars = s.word.split('');
+        for (let j = 0; j < chars.length; j++) {
+          const y = s.y - j * (fontSize + 4);
+          if (y < -20 || y > h + 20) continue;
+          const head = j === 0;
+          ctx.fillStyle = head
+            ? '#d8ffb0'
+            : `rgba(57,255,120,${Math.max(0.12, 0.75 - j * 0.13)})`;
+          ctx.fillText(chars[j], x, y);
+        }
+        s.y += s.speed;
+        if (s.y - chars.length * (fontSize + 4) > h) {
+          s.y = -Math.random() * h * 0.5;
+          s.word = words[(Math.random() * words.length) | 0];
+          s.speed = fontSize * (0.5 + Math.random() * 0.6);
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
 
-/* --- Виньетка по краям экрана ------------------------------------- */
-.vignette{
-  position:fixed;
-  inset:0;
-  z-index:6;
-  pointer-events:none;
-  background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,.5) 100%);
-}
+  /* ---------- Терминальные щелчки на UI --------------------------- */
+  function initClicks() {
+    const handler = (e) => {
+      const t = e.target.closest('button, .nav-item, .filter-chip, .search-box, a');
+      if (t) click();
+    };
+    document.addEventListener('click', handler, true);
+  }
 
-/* --- Скан-волна, пробегающая сверху вниз (в фоне за контентом) ---- */
-.scanwave{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}
-.layout{position:relative;z-index:2}
-.scanwave::before{
-  content:"";
-  position:absolute;
-  left:0;right:0;
-  height:240px;
-  background:linear-gradient(
-    to bottom,
-    transparent 0,
-    rgba(57,255,120,.03) 35%,
-    rgba(57,255,120,.09) 50%,
-    rgba(57,255,120,.03) 65%,
-    transparent 100%
-  );
-  filter:blur(6px);
-  animation:scanSweep 8s linear infinite;
-}
-.scanwave::after{
-  content:"";
-  position:absolute;
-  left:0;right:0;
-  height:1px;
-  background:var(--scan);
-  opacity:.28;
-  box-shadow:0 0 14px 3px rgba(57,255,120,.45);
-  animation:scanSweep 8s linear infinite;
-}
-@keyframes scanSweep{
-  0%{top:-240px}
-  100%{top:100%}
-}
+  /* ---------- Boot-последовательность ----------------------------- */
+  function boot() {
+    const overlay = document.getElementById('boot-screen');
+    const log = document.getElementById('boot-log');
+    const bar = document.getElementById('boot-bar-fill');
+    if (!overlay || !log) return;
 
-/* --- Хакерский глитч бренда и заголовков -------------------------- */
-.brand-mark.glitch{position:relative;animation:brandPulse 4.2s ease-in-out infinite}
-@keyframes brandPulse{
-  0%,100%{box-shadow:0 0 15px #39ff7825;text-shadow:0 0 8px #39ff7850}
-  50%{box-shadow:0 0 20px #39ff7845;text-shadow:0 0 11px #39ff78a0}
-}
+    const finish = () => {
+      overlay.classList.add('done');
+      document.body.classList.remove('booting');
+      setTimeout(() => overlay.remove(), 700);
+    };
 
-.hero h1 em{text-shadow:0 0 25px #39ff7845}
+    if (reduce) { finish(); return; }
 
-/* --- Плавная смена раздела --------------------------------------- */
-.card-grid{transition:opacity .2s ease}
-.card-grid.switching{opacity:.25}
-.lore-card{animation:appear .38s cubic-bezier(.22,.61,.36,1) both}
+    const lines = [
+      'BIOS 3115 // СИСТЕМА ПОДВАЛА v3.1.15',
+      'ПРОВЕРКА ПАМЯТИ .......... 3115 KB OK',
+      'МОНТИРОВАНИЕ /dev/podval ......... OK',
+      'ЗАГРУЗКА ДЫМОВОГО ЯДРА ........... OK',
+      'КАЛИБРОВКА КАЛЬКУЛЯТОРА РАММ ..... OK',
+      'СИНХРОНИЗАЦИЯ ЧАСТОТЫ 3115 ....... OK',
+      'ИНИЦИАЛИЗАЦИЯ ПЫЩ-ПРОТОКОЛА ...... OK',
+      'ДОСТУП РАЗРЕШЁН. ДОБРО ПОЖАЛОВАТЬ, ОПЕРАТОР.'
+    ];
 
-/* --- Терминальный курсор ------------------------------------------ */
-.term-cursor{
-  display:inline-block;
-  width:.62em;
-  height:1.02em;
-  margin-left:.28em;
-  background:var(--green);
-  box-shadow:0 0 10px var(--green);
-  vertical-align:-.16em;
-  animation:cursorBlink 1.05s steps(1) infinite;
-}
-@keyframes cursorBlink{0%,49%{opacity:1}50%,100%{opacity:0}}
+    let i = 0;
+    const speed = 130;
+    function nextLine() {
+      if (i >= lines.length) {
+        bar.style.width = '100%';
+        setTimeout(finish, 480);
+        return;
+      }
+      const p = document.createElement('div');
+      p.className = 'boot-line';
+      const txt = lines[i];
+      const isOk = /OK$/.test(txt);
+      p.innerHTML = isOk
+        ? txt.replace(/OK$/, '<span class="ok">OK</span>')
+        : txt;
+      log.append(p);
+      if (bar) bar.style.width = Math.round(((i + 1) / lines.length) * 100) + '%';
+      i++;
+      setTimeout(nextLine, speed);
+    }
+    setTimeout(nextLine, 220);
+  }
 
-.hero-meta span:first-child::after{
-  content:"▋";
-  margin-left:.4em;
-  color:var(--green);
-  animation:cursorBlink 1.05s steps(1) infinite;
-}
+  /* ---------- Печатающийся текст ---------------------------------- */
+  function typeText(el, text, speed = 34, done) {
+    if (!el) return;
+    if (reduce) { el.textContent = text; done && done(); return; }
+    el.textContent = '';
+    let i = 0;
+    (function step() {
+      el.textContent = text.slice(0, ++i);
+      if (i < text.length) setTimeout(step, speed);
+      else done && done();
+    })();
+  }
 
-/* --- Boot-оверлей ------------------------------------------------ */
-.boot{
-  position:fixed;
-  inset:0;
-  z-index:100;
-  background:#020603;
-  color:var(--green);
-  font-family:var(--mono);
-  font-size:clamp(10px,1.5vw,13px);
-  line-height:1.7;
-  padding:clamp(18px,6vw,72px);
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  gap:2px;
-  overflow:hidden;
-  transition:opacity .55s ease, visibility .55s;
-}
-.boot::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.35) 3px 4px);
-  opacity:.5;
-}
-.boot.done{opacity:0;visibility:hidden;pointer-events:none}
-.boot .boot-line{white-space:pre-wrap;text-shadow:0 0 8px rgba(57,255,120,.45)}
-.boot .boot-line .ok{color:var(--green2)}
-.boot .boot-bar{
-  margin-top:12px;
-  width:min(560px,80vw);
-  height:10px;
-  border:1px solid #245432;
-  padding:1px;
-}
-.boot .boot-bar i{
-  display:block;
-  height:100%;
-  width:0;
-  background:var(--green);
-  box-shadow:0 0 12px var(--green);
-}
-.boot .boot-hint{
-  position:absolute;
-  bottom:18px;
-  right:22px;
-  font-size:9px;
-  letter-spacing:1px;
-  color:#5f8d69;
-  opacity:.85;
-}
+  function initTypewriter() {
+    const p = document.querySelector('.hero-copy p');
+    const meta = document.querySelector('.hero-meta span:first-child');
+    if (p) {
+      const text = p.textContent.trim();
+      typeText(p, text, 16);
+    }
+    if (meta) {
+      const base = '● ЛОР ЗАГРУЖЕН';
+      meta.textContent = base;
+    }
+  }
 
-/* --- HUD в терминальном стиле ------------------------------------ */
-.smoke-hud{box-shadow:0 0 24px rgba(57,255,120,.25)}
+  /* ---------- Плавная смена содержимого --------------------------- */
+  function initSmoothSwitch() {
+    const grid = document.getElementById('card-grid');
+    if (!grid || reduce) return;
+    const obs = new MutationObserver(() => {
+      grid.classList.add('switching');
+      requestAnimationFrame(() => requestAnimationFrame(() => grid.classList.remove('switching')));
+    });
+    obs.observe(grid, { childList: true });
+  }
 
-/* --- Уважение к prefers-reduced-motion ---------------------------- */
-@media(prefers-reduced-motion:reduce){
-  .scanwave::before,.scanwave::after,.scanlines{animation:none!important}
-}
+  /* ---------- Скан-волна усиливается при ПЫЩ ---------------------- */
+  function initPyshWave() {
+    const wave = document.querySelector('.scanwave');
+    const btn = document.getElementById('pysh-button');
+    if (!wave || !btn) return;
+    btn.addEventListener('click', () => {
+      wave.style.filter = 'brightness(2.2)';
+      setTimeout(() => { wave.style.filter = ''; }, 520);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initMatrix();
+    initClicks();
+    initTypewriter();
+    initSmoothSwitch();
+    initPyshWave();
+    boot();
+  });
+})();
