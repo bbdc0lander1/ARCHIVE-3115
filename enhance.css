@@ -1,0 +1,428 @@
+/* ==========================================================================
+   ARCHIVE-3115 // ENHANCE LAYER
+   Командная палитра, досье-модалка, интерактивный терминал, таймлайн,
+   избранное, темы, HUD, тикер лора, тосты и пасхалка.
+   Подключается ПОСЛЕ style.css и hacker.css.
+   ========================================================================== */
+
+/* --- Тематические пресеты (переопределяют переменные style.css) --- */
+:root{
+  --hud-h:30px;
+}
+html[data-theme="amber"]{--green:#ffb000;--green2:#ffd98a;--muted:#a8895a;--line:#4a3a17;--bg:#0a0803;--panel:#140f05;--panel2:#1a1306}
+html[data-theme="red"]{--green:#ff4d4d;--green2:#ffb3b3;--muted:#a86a6a;--line:#4a1f1f;--bg:#0a0404;--panel:#140808;--panel2:#1a0a0a}
+html[data-theme="cyan"]{--green:#39e6ff;--green2:#b0f4ff;--muted:#6a9aa8;--line:#17404a;--bg:#03090a;--panel:#061014;--panel2:#08141a}
+html[data-theme="mono"]{--green:#e8e8e8;--green2:#ffffff;--muted:#8a8a8a;--line:#333;--bg:#050505;--panel:#0c0c0c;--panel2:#121212}
+html[data-theme="magenta"]{--green:#ff4dd2;--green2:#ffb0ec;--muted:#a86a98;--line:#4a1740;--bg:#0a0309;--panel:#140614;--panel2:#1a081a}
+
+/* --- Тикер лора (верхняя бегущая строка) -------------------------- */
+.lore-ticker{
+  position:sticky;
+  top:0;
+  z-index:9;
+  height:var(--hud-h);
+  display:flex;
+  align-items:center;
+  overflow:hidden;
+  background:#030a05;
+  border-bottom:1px solid var(--line);
+  font-size:10px;
+  letter-spacing:1px;
+  color:var(--green);
+  white-space:nowrap;
+}
+.lore-ticker .tick-track{
+  display:inline-block;
+  padding-left:100%;
+  animation:ticker 46s linear infinite;
+}
+.lore-ticker b{color:var(--green2);font-weight:normal}
+.lore-ticker .sep{color:var(--muted);margin:0 14px}
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+
+/* --- Верхние действия в шапке ------------------------------------- */
+.top-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.top-actions .icon-btn{
+  border:1px solid #2f5b3b;
+  background:#0a160e;
+  color:var(--green2);
+  width:36px;
+  height:36px;
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+  font-size:14px;
+  transition:.18s;
+}
+.top-actions .icon-btn:hover{border-color:var(--green);color:var(--green);box-shadow:0 0 16px #39ff7833}
+.top-actions .icon-btn.active{background:var(--green);color:#041007}
+.top-actions .icon-btn .fav-count{
+  position:absolute;
+  transform:translate(15px,-15px);
+  font-size:8px;
+  background:var(--green);
+  color:#041007;
+  padding:0 4px;
+  border-radius:6px;
+}
+.top-actions .icon-btn{position:relative}
+
+/* --- Палитра команд (Ctrl+K) -------------------------------------- */
+.cmdk{
+  position:fixed;
+  inset:0;
+  z-index:60;
+  display:none;
+  align-items:flex-start;
+  justify-content:center;
+  padding:clamp(40px,12vh,140px) 16px 16px;
+  background:rgba(2,7,4,.72);
+  backdrop-filter:blur(7px);
+}
+.cmdk.open{display:flex;animation:cmdkIn .18s ease}
+@keyframes cmdkIn{from{transform:translateY(-6px)}to{transform:translateY(0)}}
+.cmdk-box{
+  width:min(680px,100%);
+  background:linear-gradient(160deg,#0b140e,#070f0a);
+  border:1px solid #2f5b3b;
+  box-shadow:0 0 60px #000c,inset 0 0 40px #39ff7808;
+  max-height:70vh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.cmdk-input{
+  width:100%;
+  border:0;
+  border-bottom:1px solid var(--line);
+  background:transparent;
+  color:var(--green);
+  font-family:var(--mono);
+  font-size:15px;
+  padding:16px 18px;
+  outline:none;
+}
+.cmdk-input::placeholder{color:#5f8d69}
+.cmdk-list{overflow:auto;padding:8px}
+.cmdk-group{font-size:9px;color:var(--muted);letter-spacing:1.2px;padding:10px 12px 4px}
+.cmdk-item{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:10px 12px;
+  cursor:pointer;
+  border-left:2px solid transparent;
+}
+.cmdk-item .ci-icon{color:#4e805c;width:20px;text-align:center;font-size:15px}
+.cmdk-item .ci-main{min-width:0;flex:1}
+.cmdk-item .ci-title{color:#d6f4dc;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmdk-item .ci-sub{color:var(--muted);font-size:9px;letter-spacing:.6px}
+.cmdk-item.active,.cmdk-item:hover{background:#0a180e;border-left-color:var(--green)}
+.cmdk-item.active .ci-title{color:var(--green)}
+.cmdk-foot{display:flex;gap:16px;padding:8px 14px;border-top:1px solid var(--line);font-size:9px;color:var(--muted);letter-spacing:.6px}
+.cmdk-foot kbd{border:1px solid #34523b;padding:0 5px;color:#6f9078}
+
+/* --- Досье-модалка (карточка крупным планом) ---------------------- */
+.dossier{
+  position:fixed;
+  inset:0;
+  z-index:55;
+  display:none;
+  justify-content:center;
+  align-items:flex-start;
+  padding:clamp(16px,5vh,70px) 16px;
+  background:rgba(2,7,4,.75);
+  backdrop-filter:blur(7px);
+  overflow:auto;
+}
+.dossier.open{display:flex;animation:cmdkIn .2s ease}
+.dossier-panel{
+  width:min(860px,100%);
+  background:linear-gradient(160deg,#0b140e,#070f0a);
+  border:1px solid #245432;
+  box-shadow:0 0 60px #000c,inset 0 0 50px #39ff7808;
+  position:relative;
+  animation:riseIn .3s cubic-bezier(.22,.61,.36,1);
+}
+.dossier-panel::before{
+  content:"";
+  position:absolute;
+  inset:0 18% auto;
+  height:1px;
+  background:linear-gradient(90deg,transparent,var(--green),transparent);
+}
+.dossier-head{display:flex;gap:18px;padding:22px 22px 0;position:relative}
+.dossier-portrait{
+  width:150px;height:180px;flex:0 0 150px;
+  border:1px solid #2f5b3b;background:#0b1b10;overflow:hidden;position:relative;
+  display:grid;place-items:center;
+}
+.dossier-portrait img{width:100%;height:100%;object-fit:cover;filter:saturate(.8) contrast(1.08)}
+.dossier-portrait::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(0deg,#05100865,transparent 44%),repeating-linear-gradient(0deg,transparent 0 3px,#07110932 4px)}
+.dossier-titles{min-width:0;flex:1;padding-top:4px}
+.dossier-index{font-size:10px;color:#5f8d69;letter-spacing:1.4px}
+.dossier-titles h2{margin:8px 0 4px;font-size:clamp(22px,3.4vw,34px);color:#e4f6e8;line-height:1.1}
+.dossier-titles .subtitle{color:var(--green);font-size:12px;margin:0}
+.dossier-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.dossier-badge{border:1px solid #245432;color:var(--green2);font-size:9px;letter-spacing:.8px;padding:3px 8px}
+.dossier-close{
+  position:absolute;top:16px;right:16px;z-index:6;
+  border:1px solid #2f5b3b;background:#0a160e;color:var(--green2);
+  width:36px;height:36px;cursor:pointer;font-size:15px;transition:.18s;
+}
+.dossier-close:hover{border-color:var(--green);color:var(--green);box-shadow:0 0 16px #39ff7833}
+.dossier-body{padding:14px 24px 26px;color:#a9c4af;font-size:13px;line-height:1.75}
+.dossier-body h4{color:var(--green2);font-size:12px;letter-spacing:.6px;margin:20px 0 6px}
+.dossier-body table{width:100%;border-collapse:collapse;margin:10px 0;font-size:11px}
+.dossier-body th,.dossier-body td{border:1px solid #23442c;padding:7px 9px;text-align:left;vertical-align:top}
+.dossier-body th{color:var(--green);background:#0c1c11;font-weight:normal}
+.dossier-body blockquote{border-left:2px solid var(--green);padding:6px 12px;margin:9px 0;color:#c2dec8;background:#0a170d}
+.dossier-body ul,.dossier-body ol{padding-left:22px}
+.dossier-body li::marker{color:var(--green)}
+.dossier-body strong{color:#c8f5cf;font-weight:normal}
+.dossier-actions{display:flex;gap:10px;padding:0 24px 22px;flex-wrap:wrap}
+.dossier-actions button{
+  border:1px solid #2f5b3b;background:#0a160e;color:var(--green2);
+  font-family:var(--mono);font-size:10px;letter-spacing:.8px;padding:8px 14px;cursor:pointer;transition:.18s;
+}
+.dossier-actions button:hover{border-color:var(--green);color:var(--green);box-shadow:0 0 16px #39ff7833}
+.dossier-actions button.on{background:var(--green);color:#041007}
+.dossier-nav{display:flex;justify-content:space-between;gap:12px;padding:0 24px 22px}
+.dossier-nav button{
+  flex:1;border:1px solid #1e3826;background:none;color:#7d9d84;font-family:var(--mono);
+  font-size:10px;letter-spacing:.6px;padding:9px;cursor:pointer;transition:.18s;
+}
+.dossier-nav button:hover:not(:disabled){border-color:var(--green);color:var(--green)}
+.dossier-nav button:disabled{opacity:.35;cursor:default}
+
+/* --- Терминал ----------------------------------------------------- */
+.terminal{
+  position:fixed;
+  inset:0;
+  z-index:58;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  background:rgba(2,7,4,.78);
+  backdrop-filter:blur(7px);
+}
+.terminal.open{display:flex;animation:cmdkIn .18s ease}
+.terminal-box{
+  width:min(820px,100%);
+  height:min(560px,84vh);
+  background:#020603;
+  border:1px solid #245432;
+  box-shadow:0 0 60px #000c,inset 0 0 60px #39ff7808;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.terminal-bar{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);font-size:10px;color:var(--muted);letter-spacing:1px}
+.terminal-bar .dot{width:9px;height:9px;border-radius:50%;background:#2f5b3b}
+.terminal-bar .dot.g{background:var(--green);box-shadow:0 0 8px var(--green)}
+.terminal-out{flex:1;overflow:auto;padding:14px 16px;font-size:12px;line-height:1.7;color:#bfe0c6;white-space:pre-wrap;word-break:break-word}
+.terminal-out .cmd{color:var(--green)}
+.terminal-out .ok{color:var(--green2)}
+.terminal-out .warn{color:#ffb000}
+.terminal-out .err{color:#ff6b6b}
+.terminal-out .dim{color:var(--muted)}
+.terminal-form{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);padding:10px 14px}
+.terminal-form .ps1{color:var(--green);font-size:12px}
+.terminal-form input{
+  flex:1;background:transparent;border:0;outline:none;color:#daf4df;font-family:var(--mono);font-size:13px;
+}
+
+/* --- Тосты -------------------------------------------------------- */
+.toast-wrap{position:fixed;right:16px;bottom:calc(16px + var(--hud-h));z-index:70;display:grid;gap:8px;justify-items:end}
+.toast{
+  border:1px solid #2f5b3b;border-left:2px solid var(--green);background:#07110b;
+  color:#c8f5cf;font-size:11px;letter-spacing:.5px;padding:10px 14px;max-width:340px;
+  box-shadow:0 0 24px #000a;animation:toastIn .25s ease;
+}
+@keyframes toastIn{from{transform:translateX(20px)}to{transform:translateX(0)}}
+.toast.out{opacity:0;transform:translateX(20px);transition:.3s}
+
+/* --- Нижний HUD (статус-бар) -------------------------------------- */
+.statusbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:40;
+  height:var(--hud-h);
+  display:flex;align-items:center;gap:16px;
+  padding:0 14px;
+  background:#030a05ee;
+  border-top:1px solid var(--line);
+  backdrop-filter:blur(8px);
+  font-size:9px;letter-spacing:.8px;color:var(--muted);
+  overflow:hidden;
+}
+.statusbar b{color:var(--green);font-weight:normal}
+.statusbar .sb-item{white-space:nowrap}
+.statusbar .sb-sep{color:#2f5b3b}
+.statusbar .sb-right{margin-left:auto;display:flex;gap:16px;align-items:center}
+.statusbar .sb-clock{color:var(--green2)}
+.statusbar .sb-bar{display:inline-block;width:60px;height:6px;border:1px solid #245432;vertical-align:middle;margin-left:6px}
+.statusbar .sb-bar i{display:block;height:100%;background:var(--green);box-shadow:0 0 8px var(--green)}
+.statusbar .pulse{width:6px;height:6px;margin:0}
+
+body{padding-bottom:var(--hud-h)}
+
+/* --- Таймлайн ----------------------------------------------------- */
+.timeline{
+  position:fixed;inset:0;z-index:57;display:none;justify-content:center;align-items:flex-start;
+  padding:clamp(20px,6vh,80px) 16px;background:rgba(2,7,4,.78);backdrop-filter:blur(7px);overflow:auto;
+}
+.timeline.open{display:flex;animation:cmdkIn .2s ease}
+.timeline-panel{
+  width:min(880px,100%);background:linear-gradient(160deg,#0b140e,#070f0a);
+  border:1px solid #245432;box-shadow:0 0 60px #000c;padding:clamp(18px,3vw,30px);
+}
+.timeline-panel h2{margin:4px 0 20px;color:var(--green);font-size:20px;letter-spacing:1.3px}
+.timeline-track{position:relative;padding-left:26px}
+.timeline-track::before{content:"";position:absolute;left:7px;top:4px;bottom:4px;width:1px;background:linear-gradient(var(--green),transparent)}
+.tl-node{position:relative;padding:0 0 22px 8px}
+.tl-node::before{content:"";position:absolute;left:-24px;top:4px;width:11px;height:11px;border:1px solid var(--green);background:#0b1b10;box-shadow:0 0 12px #39ff7855}
+.tl-year{color:var(--green2);font-size:11px;letter-spacing:1px}
+.tl-node h3{margin:5px 0 4px;color:#e4f6e8;font-size:15px}
+.tl-node p{margin:0;color:#9cb6a2;font-size:11px}
+.tl-close{position:absolute;top:14px;right:14px}
+
+/* --- Конфетти ----------------------------------------------------- */
+#confetti-canvas{position:fixed;inset:0;z-index:90;pointer-events:none}
+
+/* --- Раздел «О системе» + глобальный поиск ------------------------ */
+.about{grid-column:1/-1;display:grid;gap:16px}
+.about-desc{
+  border:1px solid #1b3523;border-left:2px solid var(--green);
+  background:linear-gradient(140deg,#0b140e,#08100a);padding:16px 18px;
+  color:#a9c4af;font-size:12px;line-height:1.75;
+}
+.about-desc h4{margin:16px 0 5px;color:var(--green2);font-size:11px;letter-spacing:.6px}
+.about-desc h4:first-child{margin-top:0}
+.about-desc strong{color:#c8f5cf;font-weight:normal}
+.about-desc ul,.about-desc ol{padding-left:20px}
+.about-desc li::marker{color:var(--green)}
+.about-desc blockquote{border-left:2px solid var(--green);padding:5px 10px;margin:7px 0;color:#c2dec8;background:#0a170d}
+
+.about-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.about-stat{
+  border:1px solid #1b3523;background:#0a130d;padding:12px;text-align:center;
+  display:flex;flex-direction:column;gap:4px;
+}
+.about-stat b{color:var(--green);font-size:20px;text-shadow:0 0 14px #39ff7845}
+.about-stat span{color:var(--muted);font-size:8px;letter-spacing:1px}
+
+.about-search{border:1px solid #245432;background:linear-gradient(160deg,#0b140e,#070f0a);padding:16px}
+.about-search-head{display:flex;justify-content:space-between;gap:12px;font-size:10px;letter-spacing:1px;color:var(--green2);margin-bottom:12px;flex-wrap:wrap}
+.about-hint{color:var(--muted);font-size:9px}
+.about-input{
+  width:100%;background:#08110b;border:1px solid #24432d;color:#daf4df;
+  font-family:var(--mono);font-size:14px;padding:13px 14px;outline:none;transition:.18s;
+}
+.about-input:focus{border-color:var(--green);box-shadow:0 0 20px #39ff7825}
+.about-results{margin-top:14px;display:grid;gap:9px}
+.about-empty{text-align:center;color:var(--muted);font-size:11px;padding:26px 10px;letter-spacing:.8px}
+.about-count{font-size:10px;letter-spacing:.8px;color:var(--muted)}
+.about-count b{color:var(--green)}
+.about-result{
+  border:1px solid #1b3523;border-left:2px solid #2f5b3b;background:#08110b;
+  padding:11px 13px;cursor:pointer;transition:.16s;animation:riseIn .3s ease;
+}
+.about-result:hover{border-left-color:var(--green);background:#0a170d;box-shadow:0 0 18px #39ff7818}
+.ar-top{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.ar-title{color:#d6f4dc;font-size:13px}
+.ar-sec{color:var(--muted);font-size:9px;letter-spacing:.6px;white-space:nowrap}
+.ar-snips{display:grid;gap:4px;margin-top:7px}
+.ar-snip{color:#8fac95;font-size:11px;line-height:1.55}
+
+/* --- Команды в хронологии ----------------------------------------- */
+.tl-commands{margin-top:20px;border-top:1px solid var(--line);padding-top:14px}
+.tl-cmd-title{font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:9px}
+.tl-cmd{border:1px solid #245432;color:var(--green2);font-size:10px;padding:3px 8px;margin:0 5px 5px 0;display:inline-block}
+
+@media(max-width:650px){
+  .about-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* --- Веб-пульт управления (команды кнопками) ---------------------- */
+.web-control{
+  position:fixed;inset:0;z-index:56;display:none;justify-content:center;align-items:flex-start;
+  padding:clamp(16px,5vh,60px) 16px;background:rgba(2,7,4,.78);backdrop-filter:blur(7px);overflow:auto;
+}
+.web-control.open{display:flex;animation:cmdkIn .2s ease}
+.wc-panel{
+  width:min(900px,100%);position:relative;
+  background:linear-gradient(160deg,#0b140e,#070f0a);border:1px solid #245432;
+  box-shadow:0 0 60px #000c,inset 0 0 50px #39ff7808;padding:clamp(16px,3vw,28px);
+}
+.wc-head h2{margin:4px 0 18px;color:var(--green);font-size:20px;letter-spacing:1.3px}
+.wc-close{top:14px;right:14px;position:absolute}
+.wc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.wc-card{border:1px solid #1b3523;background:linear-gradient(140deg,#0b140e,#08100a);padding:13px}
+.wc-wide{grid-column:1/-1}
+.wc-title{font-size:10px;letter-spacing:1px;color:var(--green2);margin-bottom:10px}
+.wc-select,.wc-input{
+  width:100%;background:#08110b;border:1px solid #24432d;color:#daf4df;
+  font-family:var(--mono);font-size:11px;padding:9px 10px;outline:none;margin-bottom:9px;transition:.18s;
+}
+.wc-select:focus,.wc-input:focus{border-color:var(--green);box-shadow:0 0 16px #39ff7825}
+.wc-row{display:flex;gap:8px}
+.wc-wrap{flex-wrap:wrap}
+.wc-grow{flex:1;margin-bottom:0;min-width:200px}
+.wc-btn{
+  flex:1;border:1px solid #2f5b3b;background:#0a160e;color:var(--green2);
+  font-family:var(--mono);font-size:10px;letter-spacing:.6px;padding:9px 10px;cursor:pointer;transition:.18s;white-space:nowrap;
+}
+.top-sep{width:1px;height:24px;background:var(--line);margin:0 2px}
+.icon-btn.primary{background:#0b1c10;color:var(--green);border-color:var(--green);width:auto;display:flex;gap:7px;padding:0 12px}
+.icon-btn.primary:hover{background:var(--green);color:#041007}
+.btn-label{font-size:10px;letter-spacing:1px;font-weight:normal}
+.wc-btn:hover{border-color:var(--green);color:var(--green);box-shadow:0 0 14px #39ff7833}
+.wc-btn.primary{border-color:var(--green);color:var(--green);background:#0b1c10}
+.wc-btn.primary:hover{background:var(--green);color:#041007;box-shadow:0 0 22px #39ff7870}
+.wc-wrap .wc-btn{flex:0 0 auto}
+.wc-themes{display:flex;flex-wrap:wrap;gap:7px}
+.wc-chip{border:1px solid #1e3826;background:none;color:#7d9d84;font-family:var(--mono);font-size:10px;padding:6px 11px;cursor:pointer;transition:.18s}
+.wc-chip:hover,.wc-chip.active{color:var(--green);border-color:var(--green);background:#102117}
+.wc-console{margin-top:14px;border:1px solid #1b3523;background:#020603;max-height:180px;display:flex;flex-direction:column}
+.wc-console-bar{font-size:9px;letter-spacing:1px;color:var(--muted);padding:7px 12px;border-bottom:1px solid var(--line)}
+.wc-out{overflow:auto;padding:10px 14px;font-size:11px;line-height:1.65;color:#bfe0c6;white-space:pre-wrap;word-break:break-word}
+.wc-out .cmd{color:var(--green)}
+.wc-out .ok{color:var(--green2)}
+.wc-out .warn{color:#ffb000}
+.wc-out .err{color:#ff6b6b}
+.wc-out .dim{color:var(--muted)}
+
+@media(max-width:650px){
+  .wc-grid{grid-template-columns:1fr}
+  .web-control{padding:0}
+  .wc-panel{border:0;min-height:100dvh}
+}
+
+/* --- Скрыть на мобилке тяжёлые части ------------------------------ */
+@media(max-width:650px){
+  .statusbar{gap:10px;font-size:8px}
+  .statusbar .sb-hide{display:none}
+  .lore-ticker{font-size:9px}
+}
+
+/* --- Сместить дымовой HUD над статус-баром ------------------------ */
+.smoke-hud{bottom:calc(18px + var(--hud-h))}
+
+/* --- Избранное на карточках --------------------------------------- */
+.card-fav{
+  position:absolute;top:10px;right:10px;z-index:3;
+  border:1px solid #2f5b3b;background:#0a160e;color:#5f8d69;
+  width:28px;height:28px;display:grid;place-items:center;cursor:pointer;
+  font-size:13px;transition:.18s;opacity:.6;
+}
+.lore-card:hover .card-fav{opacity:1}
+.card-fav:hover{border-color:var(--green);color:var(--green)}
+.card-fav.on{color:var(--green);border-color:var(--green);opacity:1;box-shadow:0 0 12px #39ff7840}
+.lore-card{cursor:pointer}
+.lore-card .expand-btn,.lore-card a{cursor:pointer}
+.card-grid.favs-only .lore-card:not(.is-fav){display:none}
+
+@media(prefers-reduced-motion:reduce){
+  .lore-ticker .tick-track{animation:none}
+  #confetti-canvas{display:none}
+}
